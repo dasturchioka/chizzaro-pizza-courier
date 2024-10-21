@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chizzaro Kuryer</string>
+    <string name="title_activity_main">Chizzaro Kuryer</string>
+    <string name="package_name">com.chizzaro.courier.app</string>
+    <string name="custom_url_scheme">com.chizzaro.courier.app</string>
+</resources>

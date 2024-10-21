@@ -1,0 +1,7 @@
+{
+	"name": "Chizzaro Kuryer",
+	"integrations": {
+		"capacitor": {}
+	},
+	"type": "vue-vite"
+}
