@@ -24,7 +24,7 @@ watchEffect(() => {
 
 <template>
 	<div class="layout-default flex flex-col">
-		<RouterView v-slot="{ Component }">
+		<RouterView class="bg-[#F8F8F8]" v-slot="{ Component }">
 			<transition name="page" mode="out-in">
 				<component :is="Component" />
 			</transition>

@@ -42,10 +42,6 @@ watch(
 	},
 	{ deep: true }
 )
-onMounted(async () => {
-	const { value: token } = await Preferences.get({ key: 'token' })
-	alert(token)
-})
 </script>
 
 <template>

@@ -7,6 +7,15 @@ const routes: RouteRecordRaw[] = [
 		name: 'default-layout',
 		meta: { layout: 'default' },
 		component: () => import('@/layouts/default-layout.vue'),
+		async beforeEnter(to, from, enter) {
+			const { value: token } = await Preferences.get({ key: 'token' })
+
+			if (token) {
+				return enter()
+			} else {
+				return enter('/auth')
+			}
+		},
 		children: [
 			{
 				path: '',
@@ -33,22 +42,21 @@ const routes: RouteRecordRaw[] = [
 		name: 'auth-login-page',
 		meta: { layout: 'auth' },
 		component: () => import('@/pages/auth/login-page.vue'),
+		async beforeEnter(to, from, enter) {
+			const { value: token } = await Preferences.get({ key: 'token' })
+
+			if (!token) {
+				return enter()
+			} else {
+				return enter('/')
+			}
+		},
 	},
 ]
 
 const router = createRouter({
 	history: createWebHistory(),
 	routes,
-})
-
-router.beforeEach(async (to, from, next) => {
-	const { value: token } = await Preferences.get({ key: 'token' })
-
-	if (to.meta.layout === 'default' && !token) {
-		next('/login')
-	} else {
-		next()
-	}
 })
 
 export default router
