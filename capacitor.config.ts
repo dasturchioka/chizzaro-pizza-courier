@@ -1,9 +1,9 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.chizzaro.courier.app',
-  appName: 'Chizzaro Kuryer',
-  webDir: 'dist'
-};
+	appId: 'com.chizzaro.courier.app',
+	appName: 'Chizzaro Kuryer',
+	webDir: 'dist',
+}
 
-export default config;
+export default config

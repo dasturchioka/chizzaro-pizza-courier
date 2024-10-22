@@ -1,19 +1,33 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import Cookies from 'js-cookie'
+import { Preferences } from '@capacitor/preferences'
 
 const routes: RouteRecordRaw[] = [
 	{
 		path: '/',
-		name: 'default-blank-page',
+		name: 'default-layout',
 		meta: { layout: 'default' },
-		redirect: '/orders',
+		component: () => import('@/layouts/default-layout.vue'),
+		children: [
+			{
+				path: '',
+				name: 'default-home-page',
+				component: () => import('@/pages/default/home-page.vue'),
+			},
+			{
+				path: 'orders',
+				name: 'default-orders-page',
+				meta: { layout: 'default' },
+				component: () => import('@/pages/default/orders-page.vue'),
+			},
+			{
+				path: 'profile',
+				name: 'default-profile-page',
+				meta: { layout: 'default' },
+				component: () => import('@/pages/default/profile-page.vue'),
+			},
+		],
 	},
-	{
-		path: '/orders',
-		name: 'default-orders-page',
-		meta: { layout: 'default' },
-		component: () => import('@/pages/default/orders-page.vue'),
-	},
+
 	{
 		path: '/login',
 		name: 'auth-login-page',
@@ -27,8 +41,10 @@ const router = createRouter({
 	routes,
 })
 
-router.beforeEach((to, from, next) => {
-	if (to.meta.layout === 'default' && !Cookies.get('token')) {
+router.beforeEach(async (to, from, next) => {
+	const { value: token } = await Preferences.get({ key: 'token' })
+
+	if (to.meta.layout === 'default' && !token) {
 		next('/login')
 	} else {
 		next()

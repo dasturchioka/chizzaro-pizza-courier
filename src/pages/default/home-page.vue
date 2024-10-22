@@ -2,5 +2,5 @@
 </script>
 
 <template>
-		<div class="px-2">Orders page</div>
+	<div class="home-page px-2">Home page</div>
 </template>

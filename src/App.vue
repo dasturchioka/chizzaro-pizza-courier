@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// Component logic (if any) goes here
+import { Toaster } from '@/components/ui/sonner'
 </script>
 
 <template>
+	<Toaster position="top-center" />
 	<router-view></router-view>
 </template>
-
