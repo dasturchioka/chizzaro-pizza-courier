@@ -1,9 +1,16 @@
 <script lang="ts" setup>
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watchEffect, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { HomeIcon, ListIcon, UserIcon } from 'lucide-vue-next'
+import { useSocket } from '@/stores/socket'
+import { useProfile } from '@/stores/profile'
+import { storeToRefs } from 'pinia'
 
+const socketStore = useSocket()
+const profileStore = useProfile()
 const route = useRoute()
+
+const { profile } = storeToRefs(profileStore)
 
 const tabs = ref([
 	{ name: 'Uy', route: '/', icon: HomeIcon },
@@ -20,6 +27,12 @@ watchEffect(() => {
 })
 
 
+
+onMounted(async () => {
+	await profileStore.getProfile()
+	await socketStore.connect()
+	await socketStore.attachSocketEvents()
+})
 </script>
 
 <template>
@@ -52,29 +65,30 @@ watchEffect(() => {
 
 <style>
 .router-link-exact-active {
-	@apply animate-bounce
+	@apply animate-bounce;
 }
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-5px);
+	}
 }
 
 .animate-bounce {
-  animation: bounce 0.5s;
+	animation: bounce 0.5s;
 }
 
 .page-enter-active,
 .page-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
+	transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .page-enter-from,
 .page-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
+	opacity: 0;
+	transform: translateY(20px);
 }
 </style>

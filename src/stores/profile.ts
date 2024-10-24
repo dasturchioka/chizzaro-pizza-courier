@@ -1,18 +1,20 @@
-import { authInstance } from '@/http'
+import { profileInstance } from '@/http'
 import { Preferences } from '@capacitor/preferences'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { useRouter } from 'vue-router'
+import { Courier } from '@/models'
 
-export const useAuth = defineStore('auth-store', () => {
+export const useProfile = defineStore('profile-store', () => {
 	const router = useRouter()
 
-	const courierDetails = ref<{ login: string; password: string }>({ login: '', password: '' })
+	const profile = ref<Courier>()
 
-	async function login(payload: typeof courierDetails.value) {
+	async function getProfile() {
 		try {
-			const response = await authInstance.post('/login', { ...payload })
+			const { value: login } = await Preferences.get({ key: 'login' })
+			const response = await profileInstance.get(`/get-profile/${login}`)
 
 			if (!response) {
 				toast("Internet yoki server bilan aloqa mavjud emas, boshqatdan urinib ko'ring")
@@ -22,14 +24,15 @@ export const useAuth = defineStore('auth-store', () => {
 			const data = await response.data
 
 			if (data.status === 'bad') {
+				await Preferences.clear()
 				toast(data.msg)
+				await router.push('/login')
 				return
 			}
 
 			await Preferences.set({ key: 'token', value: data.token })
-			await Preferences.set({ key: 'login', value: data.courier.login })
-			await router.push('/')
-			toast(data.msg)
+			await Preferences.set({ key: 'login', value: data.login })
+			profile.value = data.profile
 			return
 		} catch (error: any) {
 			toast(
@@ -40,5 +43,5 @@ export const useAuth = defineStore('auth-store', () => {
 		}
 	}
 
-	return { login, courierDetails }
+	return { getProfile, profile }
 })
