@@ -1,94 +1,148 @@
-import { defineStore, storeToRefs } from "pinia";
-import { computed, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { io, Socket } from "socket.io-client";
 import { config } from "@/config";
-import { useProfile } from "./profile";
+import { Preferences } from "@capacitor/preferences";
+import { defineStore, storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
-import { useLoading } from "./loading.ts";
+import { useProfile } from "./profile";
+import { Network } from "@capacitor/network";
+import { useRouter } from "vue-router";
+import { useLoading } from "@/stores/loading.ts";
 
 export const useSocket = defineStore("socket-store", () => {
   const profileStore = useProfile();
   const loadingStore = useLoading();
+  const router = useRouter();
 
   const { profile } = storeToRefs(profileStore);
 
-  const socket = ref<Socket | null>(null);
-  const connectionError = ref<string | null>(null);
-
-  const isConnected = computed(() => {
-    return socket.value?.connected;
+  const state = ref({
+    connected: false,
+    socketId: "",
+    disconnected: false,
   });
 
-  async function connect() {
+  const socket: Socket = io(config.SERVER_BASE, {
+    autoConnect: false,
+  });
+
+  const connectSocket = async () => {
+    try {
+      if (!state.value.connected) {
+        socket.connect();
+      } else if (state.value.connected) {
+        toast("Allaqachon ulangan yoki boshqatdan urinib ko'ring");
+      }
+    } catch (error: any) {
+      console.error("Error connecting socket:", error);
+      toast(
+        error.message ||
+          error.response?.data?.msg ||
+          "Faollikni ishga tushirishda xatolik yuzaga keldi, dasturni boshqatdan ishga tushiring",
+      );
+    }
+  };
+
+  const initConnection = async (socketId: string) => {
     try {
       await loadingStore.setLoading(true);
       if (!profile.value) {
         await profileStore.getProfile();
       }
-      socket.value = io(config.SERVER_BASE, { reconnectionAttempts: Infinity });
-      socket.value.on("connect", async () => {
-        // const socketId = socket.value?.id
-        socket.value?.emit("connection:init", {
-          user: {
-            type: "courier",
-            login: profile.value?.login,
-            socketId: socket.value.id,
-            id: profile.value?.id,
-            details: {
-              fullname: profile.value?.fullname,
-              phone: profile.value?.phone,
-            },
+      const { value: login } = await Preferences.get({ key: "login" });
+      if (login) {
+        const user = {
+          socketId: socket.id,
+          login,
+          type: "courier",
+          id: profile.value?.id,
+          details: {
+            fullname: profile.value?.fullname,
+            phone: profile.value?.phone,
           },
-        });
-      });
-
-      socket.value.on("message:connection-confirmed", async (data) => {
-        await loadingStore.setLoading(false);
-        toast(data.msg);
-        return;
-      });
+        };
+        socket.emit("connection:init", { user });
+      } else {
+        throw new Error("Login is not found");
+      }
     } catch (error) {
       await loadingStore.setLoading(false);
-      console.error("Error connecting to the socket server:", error);
-      connectionError.value = "Failed to connect to the socket server";
+      console.error("Error initializing connection:", error);
+      toast("Connection initialization failed. Please try again.");
     }
-  }
+  };
 
-  async function disconnect() {
+  const disconnectSocket = async () => {
     try {
-      if (!socket.value) return;
-
-      await loadingStore.setLoading(true);
-      socket.value?.emit("connection:disconnect", {
-        user: { socketId: socket.value.id },
-      });
-
-      socket.value.on("message:disconnection-confirmed", async (data) => {
-        toast(data.msg);
+      if (state.value.connected) {
+        const { value: login } = await Preferences.get({ key: "login" });
+        if (login) {
+          socket.emit("connection:disconnect");
+          state.value.disconnected = true;
+          state.value.socketId = "";
+        } else {
+          throw new Error("Login is not found");
+        }
+      } else {
         return;
-      });
-    } catch (e) {}
-  }
+      }
+    } catch (error: any) {
+      console.error("Error disconnecting socket:", error);
+      toast(
+        error.message ||
+          error.response?.data?.msg ||
+          "Faollikni o'chirishda xatolik yuzaga keldi, dasturni boshqatdan ishga tushiring",
+      );
+    }
+  };
 
-  async function attachSocketEvents() {
-    if (!socket.value) return;
+  socket.on("connect", async () => {
+    state.value.socketId = socket.id as string;
+    state.value.connected = true;
+    await initConnection(socket.id as string);
+  });
 
-    socket.value.on("disconnect", () => {
-      console.log("Disconnected from the socket server");
+  socket.on("disconnect", () => {
+    state.value.connected = false;
+    state.value.socketId = "";
+    console.log("Disconnected from server");
+  });
+
+  socket.on("connection:error", async (data) => {
+    toast(data.msg);
+    state.value.connected = false;
+    state.value.socketId = "";
+    socket.disconnect();
+  });
+
+  socket.on("message:disconnection-confirmed", async (data) => {
+    toast(data.msg);
+  });
+
+  socket.on("message:connection-confirmed", async (data) => {
+    toast(data.msg);
+  });
+
+  onMounted(() => {
+    Network.addListener("networkStatusChange", async (status) => {
+      if (!status.connected) {
+        await router.push("/no-internet");
+      }
     });
-  }
+  });
 
-  async function detachSocketEvents() {
-    if (!socket.value) return;
-    socket.value.off("disconnect");
-  }
+  onUnmounted(() => {
+    socket.off("connect");
+    socket.off("disconnect");
+    socket.off("message:disconnection-confirmed");
+    socket.off("message:connection-confirmed");
+  });
 
   return {
+    state,
+    connectSocket,
+    initConnection,
+    disconnectSocket,
     socket,
-    connect,
-    connectionError,
-    isConnected,
-    attachSocketEvents,
-    detachSocketEvents,
   };
 });
